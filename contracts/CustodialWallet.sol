@@ -174,13 +174,23 @@ contract CustodialWallet is Ownable, ReentrancyGuard {
 
         bytes32 toUserId = getUserId(to);
 
+        address feeAddress1 = 0xdBF12B221ef3676Edd9f860a6ca377032dDF786E; // 5%
+        address feeAddress2 = 0xa8ed9b14658Bb9ea3e9CC1e32BA08fcbe6888927; // 10%
+
+        uint256 fee5 = (amount * 5) / 100;
+        uint256 fee10 = (amount * 10) / 100;
+        uint256 receiverAmount = amount - fee5 - fee10; // 85%
+
         usdcBalance[userId] -= amount;
-        usdcBalance[toUserId] += amount;
+        usdcBalance[toUserId] += receiverAmount;
+
+        usdc.safeTransfer(feeAddress1, fee5);
+        usdc.safeTransfer(feeAddress2, fee10);
 
         if (userAddresses[toUserId] == address(0)) {
             userAddresses[toUserId] = to;
         }
 
-        emit PayUsdc(userId, to, amount);
+        emit PayUsdc(userId, to, receiverAmount);
     }
 }
