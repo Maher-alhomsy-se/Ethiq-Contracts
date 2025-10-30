@@ -9,8 +9,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/TokenTimelock.sol";
 contract CustodialWallet is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    IERC20 public immutable ethiq;
+    IERC20 public ethiq;
     IERC20 public immutable usdc;
+
+    address feeAddress1 = 0xdBF12B221ef3676Edd9f860a6ca377032dDF786E; // 5%
+    address feeAddress2 = 0xa8ed9b14658Bb9ea3e9CC1e32BA08fcbe6888927; // 10%
 
     mapping(bytes32 => uint256) private usdcBalance;
     mapping(bytes32 => uint256) private ethiqBalance;
@@ -118,7 +121,7 @@ contract CustodialWallet is Ownable, ReentrancyGuard {
     ) external onlyUser(userId) nonReentrant {
         require(to != address(0), "Invalid Address");
         require(amount > 0, "amout must be > 0");
-        require(ethiqBalance[userId] > amount, "Not enough ETHIQ balance");
+        require(ethiqBalance[userId] >= amount, "Not enough ETHIQ balance");
 
         ethiqBalance[userId] -= amount;
         ethiq.safeTransfer(to, amount);
@@ -132,7 +135,7 @@ contract CustodialWallet is Ownable, ReentrancyGuard {
     ) external onlyUser(userId) nonReentrant {
         require(to != address(0), "Invalid Address");
         require(amount > 0, "amout must be > 0");
-        require(usdcBalance[userId] > amount, "Not enough ETHIQ balance");
+        require(usdcBalance[userId] >= amount, "Not enough ETHIQ balance");
 
         usdcBalance[userId] -= amount;
         usdc.safeTransfer(to, amount);
@@ -174,9 +177,6 @@ contract CustodialWallet is Ownable, ReentrancyGuard {
 
         bytes32 toUserId = getUserId(to);
 
-        address feeAddress1 = 0xdBF12B221ef3676Edd9f860a6ca377032dDF786E; // 5%
-        address feeAddress2 = 0xa8ed9b14658Bb9ea3e9CC1e32BA08fcbe6888927; // 10%
-
         uint256 fee5 = (amount * 5) / 100;
         uint256 fee10 = (amount * 10) / 100;
         uint256 receiverAmount = amount - fee5 - fee10; // 85%
@@ -192,5 +192,26 @@ contract CustodialWallet is Ownable, ReentrancyGuard {
         }
 
         emit PayUsdc(userId, to, receiverAmount);
+    }
+
+    // =============== Change Addresses Functions ===============
+
+    function changeFeeAddress1(address _feeAddress1) external onlyOwner {
+        require(_feeAddress1 != address(0), "Invalid Address");
+
+        feeAddress1 = _feeAddress1;
+    }
+
+    function changeFeeAddress2(address _feeAddress2) external onlyOwner {
+        require(_feeAddress2 != address(0), "Invalid Address");
+
+        feeAddress2 = _feeAddress2;
+    }
+
+    function changeEthiqToken(address _ethiq) external onlyOwner {
+        require(_ethiq != address(0), "Invalid Ethiq Token");
+        require(_ethiq != address(ethiq), "Same as current token");
+
+        ethiq = IERC20(_ethiq);
     }
 }
